@@ -27,8 +27,8 @@ transmart.getProbeGeneSNPMapping <- function(probeIds = NA,geneIds = NA)
   mappingQuery <- gsub("\n", "", "
                        SELECT sgm.snp_name SNP,
                               bm.BIO_MARKER_NAME GENE
-                       FROM de_snp_gene_map sgm
-                       INNER JOIN bio_marker bm ON bm.PRIMARY_EXTERNAL_ID = to_char(sgm.ENTREZ_GENE_ID) WHERE ")
+                       FROM deapp.de_snp_gene_map sgm
+                       INNER JOIN biomart.bio_marker bm ON bm.PRIMARY_EXTERNAL_ID = to_char(sgm.ENTREZ_GENE_ID) WHERE ")
   filterQuery <- ""
   
   if(any(is.na(probeIds)) & any(is.na(geneIds)))

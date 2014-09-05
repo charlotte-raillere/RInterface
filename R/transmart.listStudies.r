@@ -26,7 +26,7 @@ transmart.listStudies <- function(studyLike, concept.size = 4, gexFlag = FALSE)
 
 	SSMQuery <- gsub("\n", "", "SELECT 	DISTINCT SOURCESYSTEM_CD STUDYCODE,
 										SUBSTR(C_FULLNAME,1,REGEXP_INSTR(C_FULLNAME,'\\\\',1,?)) CONCEPT_PATH
-								FROM		I2B2
+								FROM		i2b2metadata.I2B2
 								WHERE		SOURCESYSTEM_CD LIKE (?)
 			")
 

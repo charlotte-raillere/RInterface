@@ -29,8 +29,8 @@ transmart.getPatientMapping <- function(studyList)
                                     PT.TRIAL TRIAL_NAME,
                                     REPLACE(PD.SOURCESYSTEM_CD,PT.TRIAL || ':') SUBJECT_ID,
                                     PD.PATIENT_NUM PATIENT_ID
-                    FROM PATIENT_TRIAL PT
-                    INNER JOIN PATIENT_DIMENSION PD ON PD.PATIENT_NUM = PT.PATIENT_NUM
+                    FROM i2b2demodata.PATIENT_TRIAL PT
+                    INNER JOIN i2b2demodata.PATIENT_DIMENSION PD ON PD.PATIENT_NUM = PT.PATIENT_NUM
                     WHERE PT.TRIAL IN (?)")
 
 	studyList <- paste("UPPER('",studyList,"')",sep="",collapse=",")

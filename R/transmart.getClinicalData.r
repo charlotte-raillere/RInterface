@@ -40,10 +40,10 @@ transmart.getClinicalData <- function(concepts.codelist,data.pivot = TRUE,concep
                                     WHEN 'T' THEN TVAL_CHAR
                                     WHEN 'N' THEN CAST(NVAL_NUM AS varchar2(30))
                                END VALUE 
-                            FROM CONCEPT_DIMENSION CD
-                            INNER JOIN OBSERVATION_FACT OBSF ON OBSF.CONCEPT_CD = CD.CONCEPT_CD
-                            INNER JOIN PATIENT_TRIAL PT  ON PT.PATIENT_NUM = OBSF.PATIENT_NUM
-                            INNER JOIN PATIENT_DIMENSION PD ON PD.PATIENT_NUM = PT.PATIENT_NUM
+                            FROM i2b2demodata.CONCEPT_DIMENSION CD
+                            INNER JOIN i2b2demodata.OBSERVATION_FACT OBSF ON OBSF.CONCEPT_CD = CD.CONCEPT_CD
+                            INNER JOIN i2b2demodata.PATIENT_TRIAL PT  ON PT.PATIENT_NUM = OBSF.PATIENT_NUM
+                            INNER JOIN i2b2demodata.PATIENT_DIMENSION PD ON PD.PATIENT_NUM = PT.PATIENT_NUM
                             WHERE CD.CONCEPT_CD IN (?)
                    ") 
 											   

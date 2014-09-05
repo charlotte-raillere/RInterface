@@ -1,6 +1,6 @@
 \name{transmart.getGEXData}
 \alias{transmart.getGEXData}
-%- Also NEED an '\alias' for EACH other topic documented here.
+%- Also NEED an "\alias" for EACH other topic documented here.
 \title{
 This function gets Gene Expression data from the tranSMART database.
 }
@@ -13,6 +13,7 @@ transmart.getGEXData(study.list = NA,
 					pathway = NA, 
 					signature = NA, 
 					patient.list = NA, 
+					sample.list = NA,
 					sample.type.list = NA, 
 					tissue.type.list = NA, 
 					timepoint.list = NA, 
@@ -22,9 +23,11 @@ transmart.getGEXData(study.list = NA,
 					show.genes = FALSE, 
 					print.statement = FALSE, 
 					data.pivot = TRUE, 
-					data.pivot.aggregate = NA)
+					data.pivot.aggregate = NULL,
+					data.pivot.patient_id = FALSE,
+					data.pivot.sample = FALSE)
 }
-%- maybe also 'usage' for other objects documented here.
+%- maybe also "usage" for other objects documented here.
 \arguments{
   \item{study.list}{
 	A list of studies to limit the text search to. This lookup is case insensitive.
@@ -33,13 +36,16 @@ transmart.getGEXData(study.list = NA,
 	A list of genes to filter the GEX by.
 }
   \item{pathway}{
-	A pathway (Exact text match, case insensitive.)
+	A pathway to filter the GEX by (exact text match, case insensitive).
 }
   \item{signature}{
-	The name of a gene signature that was previously loaded into the tranSMART database.
+	The name of a gene signature to filter the GEX by.
 }
   \item{patient.list}{
 	A list of patient IDs to filter the data by. This is the patient identifier generated within tranSMART.
+}
+ \item{sample.list}{
+	A list of sample codes to filter the data by. This is the sample code used to load data into the database.
 }
   \item{sample.type.list}{
 	A list of sample types to filter the data by. The available sample types can be retrieved using the transmart.listHDDAttributes function.
@@ -74,6 +80,9 @@ transmart.getGEXData(study.list = NA,
   \item{data.pivot.patient_id}{
 	This will use the tranSMART internal identifier which is guarenteed to be unique per study (barring any data issues).
 }
+  \item{data.pivot.sample}{
+	This will use the sample code instead of the subject identifier during the pivot.
+}
 }
 \details{
 %%  ~~ If necessary, more details than the description above ~~
@@ -81,8 +90,8 @@ transmart.getGEXData(study.list = NA,
 \value{
 %%  ~Describe the value returned
 %%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
+%%  \item{comp1 }{Description of "comp1"}
+%%  \item{comp2 }{Description of "comp2"}
 %% ...
 }
 \references{
@@ -103,15 +112,15 @@ transmart.getGEXData(study.list = NA,
 \examples{
 	#---
 	#Getting Gene Expression data by Study and a list of genes.
-	gexData <- transmart.getGEXData(study.list = c('Gse10021'),
-										gene.list=c('BrCA2'))
+	gexData <- transmart.getGEXData(study.list = c("Gse10021"),
+										gene.list=c("BrCA2"))
 	#---
 	
 	#---
 	#Getting Gene Expression data by study and a signature loaded into the 
 	#tranSMART data warehouse.
-	gexData <- transmart.getGEXData(study.list = c('GSE10021'),
-								signature=c('Breast Cancer Lung Metastasis'))
+	gexData <- transmart.getGEXData(study.list = c("GSE10021"),
+								signature=c("Breast Cancer Lung Metastasis"))
 	#---
 	
 	#---
@@ -120,8 +129,8 @@ transmart.getGEXData(study.list = NA,
 	#some studies. If this function is not provided for those studies, a message warning 
 	#the user about "length" being used will display and the returned data frame will 
 	#almost certain contain funny looking data.
-	gexData <- transmart.getGEXData(study.list = c('Gse10021'),
-								gene.list=c('BrCA2'),
+	gexData <- transmart.getGEXData(study.list = c("Gse10021"),
+								gene.list=c("BrCA2"),
 								data.pivot.aggregate = median)
 	#---
 	
@@ -129,7 +138,7 @@ transmart.getGEXData(study.list = NA,
 	#Using get distinct concepts to generate a study list of public studies 
 	#to get Gene Expression data for.
 	breastCancerStudies <- transmart.getDistinctConcepts(
-pathMatchList = c('\\\\Public Studies\\\\\%\\\\Cancer\\\\Breast Cancer\\\\\%Affymetrix'))
+pathMatchList = c("\\\\Public Studies\\\\\%\\\\Cancer\\\\Breast Cancer\\\\\%Affymetrix"))
 	
 	#Pass in the list of studies, a list of genes, 
 	#a function to aggregate the data with multiple records, 
@@ -138,18 +147,18 @@ pathMatchList = c('\\\\Public Studies\\\\\%\\\\Cancer\\\\Breast Cancer\\\\\%Affy
 	#our own unique internal ID as the patient ID.
 	breastCancerData <- transmart.getGEXData(
 		study.list=breastCancerStudies$STUDYCODE,
-		gene.list=c('BRCA1','BRCA2'),
-		platform.list = c('GPL96'),
+		gene.list=c("BRCA1","BRCA2"),
+		platform.list = c("GPL96"),
 		data.pivot.aggregate = median,
 		data.pivot.patient_id = TRUE)	
 	#---
 	
 	#---
 	#Pull gene expression data for a study, for a given signature, 
-	#with a platform filter but don't pivot it.
+	#with a platform filter but don"t pivot it.
 	gep.tmp.oneplat=transmart.getGEXData(study.list="GSE10021",
 								signature="u133p2.gene.names",
-								platform.list = c('GPL96'), 
+								platform.list = c("GPL96"), 
 								data.pivot = FALSE)
 	#---
 	
@@ -157,20 +166,20 @@ pathMatchList = c('\\\\Public Studies\\\\\%\\\\Cancer\\\\Breast Cancer\\\\\%Affy
 	#Pull gene expression data but remove any probes 
 	#from GPL97 if they overlap with GPL96.
 	gep.tmp.overlapremoved=transmart.getGEXData(study.list="GSE10021",
-									platform.removeOnOverlap = c('GPL97'))
+									platform.removeOnOverlap = c("GPL97"))
 	#---
 	
 	#---
 	#Pull gene expression by a probe id.
 	gep.tmp.probelist = transmart.getGEXData(study.list="GSE10021",
-							probe.list=c('201172_x_at','202068_s_at'))
+							probe.list=c("201172_x_at","202068_s_at"))
 	#---
 	
 	#---
 	#Pull gene expression based on Sample Types.
 	
 	#This gets a list of all public studies.
-	publicStudyList <- transmart.listStudies('GSE\%')
+	publicStudyList <- transmart.listStudies("GSE\%")
 	
 	#This gets the attributes for all those studies.
 	attr=transmart.listHDDAttributes(studyList = publicStudyList$STUDYCODE)
@@ -181,10 +190,10 @@ pathMatchList = c('\\\\Public Studies\\\\\%\\\\Cancer\\\\Breast Cancer\\\\\%Affy
 	#Pull all the BRCA2 GEX data for the Fifth SAMPLE_TYPE.
 	gexData <- transmart.getGEXData(study.list = publicStudyList$STUDYCODE,
 					sample.type.list = sampleTypes$SAMPLE_TYPE[5],
-					gene.list=c('BrCA2'))
+					gene.list=c("BrCA2"))
 	#---
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
+% Add one or more standard keywords, see file "KEYWORDS" in the
 % R documentation directory.
 \keyword{ ~kwd1 }
 \keyword{ ~kwd2 }% __ONLY ONE__ keyword per line

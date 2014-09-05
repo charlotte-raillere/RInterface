@@ -66,10 +66,10 @@ transmart.getSNPData <- function(
 
 	#This is the base of the table clauses.
 	baseSQLTableStatement <- gsub("\n", "", "
-                            FROM DE_SUBJECT_SAMPLE_MAPPING DSM
-                            INNER JOIN patient_dimension PD ON DSM.patient_id = PD.patient_num 
-                            LEFT JOIN DE_SNP_CALLS_BY_GSM SNP_GENO ON DSM.OMIC_PATIENT_ID = SNP_GENO.PATIENT_NUM AND DSM.SAMPLE_CD = SNP_GENO.GSM_NUM
-                            LEFT JOIN DE_SNP_COPY_NUMBER SNP_COPY ON DSM.OMIC_PATIENT_ID = SNP_COPY.PATIENT_NUM AND SNP_GENO.snp_name = SNP_COPY.snp_name
+                            FROM deapp.DE_SUBJECT_SAMPLE_MAPPING DSM
+                            INNER JOIN i2b2demodata.patient_dimension PD ON DSM.patient_id = PD.patient_num 
+                            LEFT JOIN deapp.DE_SNP_CALLS_BY_GSM SNP_GENO ON DSM.OMIC_PATIENT_ID = SNP_GENO.PATIENT_NUM AND DSM.SAMPLE_CD = SNP_GENO.GSM_NUM
+                            LEFT JOIN deapp.DE_SNP_COPY_NUMBER SNP_COPY ON DSM.OMIC_PATIENT_ID = SNP_COPY.PATIENT_NUM AND SNP_GENO.snp_name = SNP_COPY.snp_name
                             ")
 	
 	baseSQLWhereStatement <- ""

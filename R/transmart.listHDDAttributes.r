@@ -24,9 +24,9 @@ transmart.listHDDAttributes <- function(studyList)
 	#Create the connection to the oracle DB.
 	tranSMART.DB.connection <- tranSMART.DB.establishConnection()
 
-	sampleTypeQuery <- gsub("\n", "", "SELECT DISTINCT SAMPLE_TYPE FROM DE_SUBJECT_SAMPLE_MAPPING WHERE TRIAL_NAME IN (?)")
-	tissueTypeQuery <- gsub("\n", "", "SELECT DISTINCT TISSUE_TYPE FROM DE_SUBJECT_SAMPLE_MAPPING WHERE TRIAL_NAME IN (?)")
-	timepointQuery <- gsub("\n", "", "SELECT DISTINCT TIMEPOINT FROM DE_SUBJECT_SAMPLE_MAPPING WHERE TRIAL_NAME IN (?)")
+	sampleTypeQuery <- gsub("\n", "", "SELECT DISTINCT SAMPLE_TYPE FROM deapp.DE_SUBJECT_SAMPLE_MAPPING WHERE TRIAL_NAME IN (?)")
+	tissueTypeQuery <- gsub("\n", "", "SELECT DISTINCT TISSUE_TYPE FROM deapp.DE_SUBJECT_SAMPLE_MAPPING WHERE TRIAL_NAME IN (?)")
+	timepointQuery <- gsub("\n", "", "SELECT DISTINCT TIMEPOINT FROM deapp.DE_SUBJECT_SAMPLE_MAPPING WHERE TRIAL_NAME IN (?)")
 
 	studyList <- paste("UPPER('",studyList,"')",sep="",collapse=",")
 

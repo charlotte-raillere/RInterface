@@ -24,7 +24,7 @@ transmart.getProbeGeneMapping <- function(probeIds = NA,geneIds = NA)
 	#Create the connection to the oracle DB.
 	tranSMART.DB.connection <- tranSMART.DB.establishConnection()
 
-	mappingQuery <- gsub("\n", "", "SELECT DISTINCT PROBE_ID, GENE_SYMBOL FROM de_mrna_annotation WHERE ")
+	mappingQuery <- gsub("\n", "", "SELECT DISTINCT PROBE_ID, GENE_SYMBOL FROM deapp.de_mrna_annotation WHERE ")
 	filterQuery <- ""
 	
 	if(any(is.na(probeIds)) & any(is.na(geneIds)))

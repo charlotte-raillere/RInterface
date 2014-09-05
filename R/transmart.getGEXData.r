@@ -25,6 +25,7 @@ transmart.getGEXData <- function(
   pathway				=NA,
   signature				=NA,
   patient.list			=NA,
+  sample.list    	=NA,
   sample.type.list 		=NA,
   tissue.type.list 		=NA,
   timepoint.list 		= NA,
@@ -35,18 +36,16 @@ transmart.getGEXData <- function(
   print.statement 		= FALSE,
   data.pivot			= TRUE,
   data.pivot.aggregate	= NULL,
-  data.pivot.patient_id = FALSE
+  data.pivot.patient_id = FALSE,
+  data.pivot.sample = FALSE
 )
 {
-
-	#Since the partition on the microarray table isn't JUST the study name we need to pull the proper name from the DB. Create the list of partitions here based on the study list.
-	partitionList <- tranSMART.getPartitionList(study.list)
 
 	#Create the connection to the oracle DB.
 	tranSMART.DB.connection <- tranSMART.DB.establishConnection()
 
 	#If the study list and the patient list are empty, throw an error.
-	if(any(is.na(study.list)) && any(is.na(patient.list))) stop("You must provide either a study list or a patient list to run a query.")
+	if(any(is.na(study.list)) && any(is.na(patient.list)) && any(is.na(sample.list))) stop("You must provide either a study list or a patient list to run a query.")
 	
 	#Don't allow multiple gene list filters.
 	if((!is.na(pathway) && !is.na(signature)) || (!is.na(pathway) && any(!is.na(gene.list))) || (!is.na(signature) && any(!is.na(gene.list))))
@@ -56,7 +55,8 @@ transmart.getGEXData <- function(
 
 	#This is the base SQL statement to get microarray data, Column section only.
 	baseSQLSelectStatement <- gsub("\n", "", "
-                    a.PATIENT_ID, 
+                    a.PATIENT_ID,
+                    ssm.SAMPLE_CD,
                     a.RAW_INTENSITY, 
                     a.ZSCORE, 
                     a.LOG_INTENSITY, 
@@ -73,54 +73,68 @@ transmart.getGEXData <- function(
 	#This is the base of the table clauses.
 	baseSQLTableStatement <- gsub("\n", "", "
             FROM deapp.de_subject_microarray_data a 
-            INNER JOIN de_subject_sample_mapping ssm ON ssm.assay_id = A.assay_id")
+            INNER JOIN deapp.de_subject_sample_mapping ssm ON ssm.assay_id = A.assay_id")
 	
 	baseSQLWhereStatement <- ""
 	
+  whereStatementBegan <- FALSE
+  
 	#We either filter by a patient list or a study list.
 	if(any(!is.na(study.list)))
 	{
 		baseSQLWhereStatement <- gsub("\n", "", " 
-                                                  WHERE SSM.trial_name IN (?1)
-                                                  AND a.trial_source in (?2)")
+                                                  WHERE SSM.trial_name IN (?1) ")
 		
 		studyListString <- paste("UPPER('",study.list,"')",sep="",collapse=",")
 		
-		studyListStringIndex <- paste("'",partitionList$PART,"'",sep="",collapse=",")
-		
 		baseSQLWhereStatement <- gsub("\\?1",studyListString,baseSQLWhereStatement)
-		
-		baseSQLWhereStatement <- gsub("\\?2",studyListStringIndex,baseSQLWhereStatement)
-
+    
+		whereStatementBegan <- TRUE
 	}
-	else
-	{
-		baseSQLWhereStatement <- " WHERE SSM.patient_id IN (?) "
+  if(any(!is.na(patient.list))){
+    if(whereStatementBegan){
+      baseSQLWhereStatement <- paste(baseSQLWhereStatement,"  AND SSM.patient_id IN (?) ",sep="")
+    }else{
+      baseSQLWhereStatement <- " WHERE SSM.patient_id IN (?) "  
+    }
 		
 		patientListString <- paste("'",patient.list,"'",sep="",collapse=",")
 		
 		baseSQLWhereStatement <- gsub("\\?",patientListString,baseSQLWhereStatement)
+    
+		whereStatementBegan <- TRUE
+	}
+	if(any(!is.na(sample.list))){
+	  if(whereStatementBegan){
+	    baseSQLWhereStatement <- paste(baseSQLWhereStatement,"  AND SSM.sample_cd IN (?) ",sep="")
+	  }else{
+	    baseSQLWhereStatement <- " WHERE SSM.sample_cd IN (?) "  
+	  }
+	  
+	  patientListString <- paste("'",sample.list,"'",sep="",collapse=",")
+	  
+	  baseSQLWhereStatement <- gsub("\\?",patientListString,baseSQLWhereStatement)
 	}
 	
+	if(show.genes == TRUE)
+	{
+	  #Add the gene columns to the select.
+	  baseSQLSelectStatement <- paste(baseSQLSelectStatement,", b.GENE_SYMBOL, b.GENE_ID ",sep= " ")
+	}
+  
 	#If a pathway was included, append more info to the query here.
 	if(!is.na(pathway) || any(!is.na(gene.list)) || any(!is.null(probe.list)))
 	{
 		#Add a SELECT DISTINCT to the select statement.
 		baseSQLSelectStatement <- paste("SELECT DISTINCT ",baseSQLSelectStatement,sep=" ")
 		
-		if(show.genes == TRUE)
-		{
-			#Add the gene columns to the select.
-			baseSQLSelectStatement <- paste(baseSQLSelectStatement,", b.GENE_SYMBOL, b.GENE_ID ",sep= " ")
-		}
-		
 		#Add the table joins.
 		newTableJoins <- gsub("\n", "", "
         INNER JOIN deapp.de_mrna_annotation b ON a.probeset_id = b.probeset_id 
-        INNER JOIN bio_marker bm ON bm.PRIMARY_EXTERNAL_ID = to_char(b.GENE_ID)
-        INNER JOIN bio_marker_correl_mv sbm ON sbm.asso_bio_marker_id = bm.bio_marker_id
-        INNER JOIN search_keyword sk ON sk.bio_data_id = sbm.bio_marker_id
-        INNER JOIN SEARCH_KEYWORD_TERM skt ON sk.SEARCH_KEYWORD_ID = skt.SEARCH_KEYWORD_ID ")
+        INNER JOIN biomart.bio_marker bm ON bm.PRIMARY_EXTERNAL_ID = to_char(b.GENE_ID)
+        INNER JOIN biomart.bio_marker_correl_mv sbm ON sbm.asso_bio_marker_id = bm.bio_marker_id
+        INNER JOIN searchapp.search_keyword sk ON sk.bio_data_id = sbm.bio_marker_id
+        INNER JOIN searchapp.SEARCH_KEYWORD_TERM skt ON sk.SEARCH_KEYWORD_ID = skt.SEARCH_KEYWORD_ID ")
 		
 		baseSQLTableStatement <- paste(baseSQLTableStatement,newTableJoins,sep="")
 		
@@ -129,56 +143,38 @@ transmart.getGEXData <- function(
 		{
 			searchWords <- paste("UPPER('",pathway,"')",sep="",collapse=",")
 			baseSQLWhereStatement <- paste(baseSQLWhereStatement," AND skt.KEYWORD_TERM IN (",searchWords,")",sep="")
-		}
-		else if(any(!is.na(gene.list)))
+		}else if(any(!is.na(gene.list)))
 		{
 			searchWords <- paste("UPPER('",gene.list,"')",sep="",collapse=",")
 			baseSQLWhereStatement <- paste(baseSQLWhereStatement," AND skt.KEYWORD_TERM IN (",searchWords,")",sep="")
-		}
-		else if(any(!is.null(probe.list)))
+		}else if(any(!is.null(probe.list)))
 		{
 			searchWords <- paste("'",probe.list,"'",sep="",collapse=",")
 			baseSQLWhereStatement <- paste(baseSQLWhereStatement," AND b.PROBE_ID IN (",searchWords,")",sep="")
 		}
 		
-	}
-	else if(!is.na(signature))
+	}else if(!is.na(signature))
 	{
 		#Add a SELECT DISTINCT to the select statement.
 		baseSQLSelectStatement <- paste("SELECT DISTINCT ",baseSQLSelectStatement,sep=" ")
 		
-		if(show.genes == TRUE)
-		{
-			#Add the gene columns to the select.
-			baseSQLSelectStatement <- paste(baseSQLSelectStatement,", b.GENE_SYMBOL, b.GENE_ID ",sep= " ")
-		}
-		
 		#Add the table joins.
 		newTableJoins <- gsub("\n", "", "
-        INNER JOIN 
-          (
-               SELECT              CASE
-                                        WHEN bfg.PROBESET_ID IS NOT NULL THEN bfg.PROBESET_ID
-                                        WHEN bbm.PROBESET_ID IS NOT NULL THEN bbm.PROBESET_ID                              
-                                   END PROBESET_ID,
-                                   CASE
-                                        WHEN bfg.PROBESET_ID IS NOT NULL THEN bfg.PROBE_ID
-                                        WHEN bbm.PROBESET_ID IS NOT NULL THEN bbm.PROBE_ID                              
-                                   END PROBE_ID,          
-                                   CASE
-                                        WHEN bfg.PROBESET_ID IS NOT NULL THEN bfg.GENE_SYMBOL     
-                                        WHEN bbm.PROBESET_ID IS NOT NULL THEN bbm.GENE_SYMBOL                                   
-                                   END GENE_SYMBOL                                        
-               FROM          SEARCH_KEYWORD_TERM skt
-               INNER JOIN search_keyword sk ON sk.SEARCH_KEYWORD_ID = skt.SEARCH_KEYWORD_ID
-               INNER JOIN SEARCH_GENE_SIGNATURE SGS ON SGS.SEARCH_GENE_SIGNATURE_ID = sk.bio_data_id
-               INNER JOIN SEARCH_GENE_SIGNATURE_ITEM SGSI ON SGS.SEARCH_GENE_SIGNATURE_ID = SGSI.SEARCH_GENE_SIGNATURE_ID
-               LEFT JOIN bio_assay_feature_group fg ON fg.bio_assay_feature_group_id = SGSI.bio_assay_feature_group_id
-               LEFT JOIN deapp.de_mrna_annotation bfg ON bfg.PROBE_ID = fg.FEATURE_GROUP_NAME
-               LEFT JOIN bio_marker bm ON bm.bio_marker_id = SGSI.bio_marker_id
-               LEFT JOIN deapp.de_mrna_annotation bbm ON to_char (bbm.GENE_ID) = bm.PRIMARY_EXTERNAL_ID
-               WHERE          skt.KEYWORD_TERM IN (?) 
-          ) b ON a.PROBESET_ID = b.PROBESET_ID  ")
+                          INNER JOIN 
+                          (
+		                      select bbm.probeset_id, bbm.gpl_id, bbm.gene_symbol, bbm.probe_id                        
+		                      FROM          searchapp.SEARCH_KEYWORD_TERM skt
+		                      INNER JOIN searchapp.search_keyword sk ON sk.SEARCH_KEYWORD_ID = skt.SEARCH_KEYWORD_ID
+		                      INNER JOIN searchapp.SEARCH_GENE_SIGNATURE SGS ON SGS.SEARCH_GENE_SIGNATURE_ID = sk.bio_data_id
+		                      INNER JOIN searchapp.SEARCH_GENE_SIGNATURE_ITEM SGSI ON SGS.SEARCH_GENE_SIGNATURE_ID = SGSI.SEARCH_GENE_SIGNATURE_ID
+		                      left JOIN deapp.de_mrna_annotation bfg ON bfg.probeset_id = sgsi.probeset_id
+		                      left JOIN biomart.bio_marker bm ON bm.primary_external_id = to_char(bfg.gene_id)
+		                      left JOIN biomart.bio_marker bm ON bm.bio_marker_id = SGSI.bio_marker_id
+		                      INNER JOIN biomart.bio_marker_correl_mv sbm ON sbm.bio_marker_id = bm.bio_marker_id
+		                      inner join biomart.bio_marker bm2 on bm2.bio_marker_id = sbm.asso_bio_marker_id
+		                      inner join deapp.de_mrna_annotation bbm ON to_char(bbm.gene_id) = bm2.primary_external_id
+		                      WHERE          skt.KEYWORD_TERM IN (?) 
+		) b ON a.probeset_id = b.probeset_id ")
 		
 		baseSQLTableStatement <- paste(baseSQLTableStatement,newTableJoins,sep="")
 		
@@ -188,8 +184,7 @@ transmart.getGEXData <- function(
 		#Add the where clauses.
 		baseSQLTableStatement <- gsub("\\?",searchWords,baseSQLTableStatement)
 	
-	}
-	else
+	}else
 	{
 		#Add a SELECT DISTINCT to the select statement.
 		baseSQLSelectStatement <- paste("SELECT DISTINCT ",baseSQLSelectStatement,sep=" ")	
@@ -267,8 +262,10 @@ transmart.getGEXData <- function(
 		if(data.pivot.patient_id == TRUE)
 		{
 			pivotPatient = "PATIENT_ID"
-		}
-		else
+		}else if(data.pivot.sample == TRUE)
+		{
+		  pivotPatient = "SAMPLE_CD"
+		}else
 		{
 			pivotPatient = "SUBJECT_ID"
 		}
@@ -297,8 +294,7 @@ transmart.getGEXData <- function(
 		{
 			print("WARNING! About to use an aggregation when pivoting data. Do not use this option unless you are aware of the reason for duplicate information.")
 			dataToReturn <- dcast(dataToReturn, as.formula(pivotFormula), value.var = 'LOG_INTENSITY',fun.aggregate = data.pivot.aggregate) 			
-		}
-		else
+		}else
 		{
 			#Pivot the trimmed data.
 			dataToReturn <- dcast(dataToReturn, as.formula(pivotFormula), value.var = 'LOG_INTENSITY') 			
@@ -323,39 +319,6 @@ transmart.getGEXData <- function(
 	}
 	
 	dataToReturn
-}
-
-tranSMART.getPartitionList <- function(study.list)
-{
-	#Create the connection to the oracle DB.
-	tranSMART.DB.connection <- tranSMART.DB.establishConnection()
-	
-	baseSQLSelectStatement <- "select distinct OMIC_SOURCE_STUDY||':'||source_cd from de_subject_sample_mapping WHERE trial_name in (?)"
-	
-	studyListString <- paste("UPPER('",study.list,"')",sep="",collapse=",")
-	
-	baseSQLSelectStatement <- gsub("\\?",studyListString,baseSQLSelectStatement)
-	
-	print("Sending Partition Query.")
-	
-	#Send the query to the server.
-  	rs <- dbSendQuery(tranSMART.DB.connection, baseSQLSelectStatement)
-	
-	print("Retrieving Partition Records.")
-	
-	#Retrieve the entire data set.
-  	dataToReturn <- fetch(rs)
-	
-	colnames(dataToReturn) <- c('PART')
-	
-	#Clear the results object.
-	dbClearResult(rs)
-	
-	#Disconnect from the database.
-	dbDisconnect(tranSMART.DB.connection)		
-	
-	return(dataToReturn)
-	
 }
 
 

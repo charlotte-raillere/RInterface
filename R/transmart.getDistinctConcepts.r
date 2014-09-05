@@ -32,8 +32,8 @@ transmart.getDistinctConcepts <- function(studyList = NULL,pathMatchList)
 										CD.CONCEPT_PATH,
 										CD.SOURCESYSTEM_CD STUDYCODE,
 										COUNT(1)
-							FROM	CONCEPT_DIMENSION CD
-							INNER JOIN OBSERVATION_FACT OBSF ON OBSF.CONCEPT_CD = CD.CONCEPT_CD
+							FROM	i2b2demodata.CONCEPT_DIMENSION CD
+							INNER JOIN i2b2demodata.OBSERVATION_FACT OBSF ON OBSF.CONCEPT_CD = CD.CONCEPT_CD
 							WHERE 
                    ")
 	
