@@ -36,7 +36,7 @@ from searchapp.search_gene_signature a
 inner join searchapp.search_gene_signature_item b on a.search_gene_signature_id = b.search_gene_signature_id
 left outer join deapp.de_mrna_annotation c on c.probeset_id = b.probeset_id
 left outer join biomart.bio_marker d on d.bio_marker_id = b.bio_marker_id
-where name = '",name, "'", sep='')
+where deleted_flag=0 and name = '",name, "'", sep='')
   
   #Send the query to the server.
   rs <- dbSendQuery(tranSMART.DB.connection, query)
